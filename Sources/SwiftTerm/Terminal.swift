@@ -5534,6 +5534,18 @@ open class Terminal {
     {
         buffer.yDisp = newValue
         synchronizedOutputBuffer?.yDisp = newValue
+        // LaunchDeck fork patch (follow-output pause). `setViewYDisp` is the single
+        // choke point that every explicit scroll (wheel / scroller drag / pageUp/Down
+        // / keyboard) funnels through via `scrollTo(row:)`; the engine's own
+        // follow-output writes `buffer.yDisp = buffer.yBase` directly and never comes
+        // here. Upstream `userScrolling` is declared but NEVER set true, so `scroll()`
+        // always re-snaps the viewport to the bottom on the next streamed line —
+        // making it impossible to scroll up while output is active. Keep the flag in
+        // sync with whether the viewport is above the bottom: scrolling up pauses
+        // follow (streaming output holds position), and scrolling back to the bottom
+        // clears it so follow resumes automatically. See LaunchDeck CLAUDE.md
+        // "SwiftTerm fork".
+        userScrolling = newValue < buffer.yBase
     }
 
     /**
